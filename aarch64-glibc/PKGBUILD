@@ -28,6 +28,7 @@ prepare() {
 build() {
   cd glibc-build
   echo "build-programs=no" > configparms
+  echo "cross-compiling=yes" >> configparms
   echo "slibdir=/usr/lib" >> configparms
   echo "rtlddir=/usr/lib" >> configparms
 
@@ -52,7 +53,6 @@ build() {
 
 package() {
   cd glibc-build
-
   make DESTDIR="$pkgdir"/usr/$_target/sys-root install 
 
   #we don't want static libraries. Only keep the one that we really need.
@@ -62,7 +62,7 @@ package() {
   rm -r "$pkgdir"/usr/$_target/sys-root/{etc,usr/share,var}
 
   #strip manually
-  find "$pkgdir"/usr/$_target/sys-root -name '*.so' -and ! -name 'libc.so' | xargs $_target-strip --strip-all
+  find "$pkgdir"/usr/$_target/sys-root -name '*.so' -and ! -name 'libc.so' -print0 | xargs -0 $_target-strip --strip-all
 
   #workaround for fakeroot bug
   chown -R root:root "$pkgdir"/usr
