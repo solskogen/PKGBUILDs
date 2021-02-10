@@ -13,8 +13,8 @@ pkgdesc='The GNU Compiler Collection - cross compiler for ARM64 target'
 arch=(x86_64)
 url='https://gcc.gnu.org/'
 license=(GPL LGPL FDL)
-depends=(libmpc zstd $_arch-glibc)
-makedepends=($_arch-binutils)
+depends=(libmpc zstd )
+makedepends=($_arch-binutils $_arch-glibc)
 provides=($_arch-gcc)
 conflicts=($_arch-gcc-bootstrap)
 options=(!emptydirs !strip staticlibs)
@@ -39,8 +39,11 @@ prepare() {
   # link isl for in-tree builds
   ln -sf ../isl-$_islver isl
 
-  # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
-  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" "$srcdir"/$_basedir/{libiberty,gcc}/configure
+  #hack - Having CPPFLAGS defined makes the build barf. Workaround it like this:
+  _cppflags=$CPPFLAGS
+  CFLAGS="$_cppflags $CFLAGS"
+  CXXFLAGS="$_cppflags $CXXFLAGS"
+  unset CPPFLAGS
 
   rm -rf "$srcdir"/gcc-build
   mkdir "$srcdir"/gcc-build
@@ -63,14 +66,15 @@ build() {
       --enable-checking=release --disable-static \
       --enable-fix-cortex-a53-835769 --enable-fix-cortex-a53-843419
 
-  make all-gcc all-target-{libgcc,libstdc++-v3,libgomp,libgfortran,libquadmath}
+  make
 }
 
 package() {
   cd gcc-build
 
-  make install-strip-gcc install-strip-target-{libgcc,libstdc++-v3,libgomp,libgfortran,libquadmath} DESTDIR="$pkgdir"
+  make install DESTDIR="$pkgdir"
   ln -s $_target-gcc "$pkgdir"/usr/bin/$_target-cc
   # Remove files that conflict with host gcc package
-  rm -r "$pkgdir"/usr/{include,share}
+  rm -r "$pkgdir"/usr/{include,lib/libcc*,share}
+  chown -R root:root "$pkgdir"/usr
 }

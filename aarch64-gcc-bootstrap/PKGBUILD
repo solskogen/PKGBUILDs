@@ -39,8 +39,11 @@ prepare() {
   # link isl for in-tree builds
   ln -sf ../isl-$_islver isl
 
-  # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
-  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" "$srcdir"/$_basedir/{libiberty,gcc}/configure
+  #hack - Having CPPFLAGS defined makes the build barf. Workaround it like this:
+  _cppflags=$CPPFLAGS
+  CFLAGS="$_cppflags $CFLAGS"
+  CXXFLAGS="$_cppflags $CXXFLAGS"
+  unset CPPFLAGS
 
   rm -rf "$srcdir"/gcc-build
   mkdir "$srcdir"/gcc-build
@@ -76,4 +79,8 @@ package() {
   ln -s $_target-gcc "$pkgdir"/usr/bin/$_target-cc
   # Remove files that conflict with host gcc package
   rm -r "$pkgdir"/usr/{include,share}
+
+  #workaround for fakeroot bug
+  chown -R root:root "$pkgdir"/usr
+
 }
